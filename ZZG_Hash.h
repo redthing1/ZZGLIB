@@ -35,7 +35,7 @@ The bucket is read locked and cannot be insert and delete data.
 5, the reading and updating of the data node can be carried out concurrently, and the reading thread determines whether the data is consistent by version comparison.
 In general, the read and update operations are fully concurrent; Insert and delete are concurrent at the bucket level
 
-/*****************consideration for improvement*************
+*****************consideration for improvement*************
 * If there are too many hash collisions, the concurrency performance will be reduced due to the presence of bucket locks. There are two optimization ways:
 
 * 1, Divid the bucket with collitions into several buckets, each bucket has an independent bucket lock
