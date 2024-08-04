@@ -1,69 +1,86 @@
-﻿
-#include <QCoreApplication>
-//using namespace std;
-#include <ZZG_Hash.h>
-#include <QString>
-#include <iostream>
-#include <QRandomGenerator64>
+﻿#include <iostream>
 #include <string>
-#include <QTime>
+#include <chrono>
+#include <random>
+#include <unordered_map>
+#include "ZZG_Hash.h"  // Assuming this is your custom hash implementation
 
-//Multiplies by 3/4,just considering the load factor of 0.75
-#define LOOPS   1024*1024*3/4
-#define SHIFT   5
-int main(int argc, char *argv[])
-{
-    QCoreApplication a(argc, argv);
+#define LOOPS 1024*1024*3/4
+#define SHIFT 5
 
-    ZZG::zHash <QString, size_t> MyHash;
-    QHash <QString, size_t> qHash;
-    size_t Buckets, FilledBuckets, Elements, Collitions, MaxCollition;
-    QString str;
-  //  zHash.SetCountable(false);
-  //  MyHash.SetInitBuckets(1024 * 1024); //Sets initial amount of buckets. The default is 256
-    QTime T0,T1,T2,T3,T4;   //Check time points to evaluate performance
-    uint64_t Value;
-    size_t i=0;
-    uint64_t *pRandNum=new uint64_t[LOOPS*3];
-    //-------Creates random strings------------------
-    T0 = QTime::currentTime();
-    //Create random serials
-    QRandomGenerator64::system()->fillRange(pRandNum,LOOPS*3);
-    QRandomGenerator RandGen;
-   
-    int8_t* pc = (int8_t*)pRandNum;
-    int8_t* pEnd = pc + LOOPS * 24;
-    //Modifies control characters
-    for (; pc < pEnd; ++pc)
-    {
-        if ((*pc<0x21)||(*pc>0x7e))
-            *pc = RandGen.bounded(0x21,0x7f);
+std::string generate_random_string(std::mt19937_64& gen, int length) {
+    static const char charset[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    std::string result(length, 0);
+    std::uniform_int_distribution<> dist(0, sizeof(charset) - 2);
+
+    for (int i = 0; i < length; ++i) {
+        result[i] = charset[dist(gen)];
     }
-    //Creates strings one by one
-    QString *Key=new QString[LOOPS];
-    for (i; i < LOOPS; ++i)
-        Key[i]=QString::fromUtf8((char*)(pRandNum + 3 * i),16);
-    //________________________________________________________
-    T1 = QTime::currentTime();    
-    for (i = 0; i < LOOPS; ++i)
-        MyHash.Insert(Key[i], i);
-    for (i = 0; i < LOOPS; ++i)
-        MyHash.Value(Key[i], &Value);
 
-    T2 = QTime::currentTime();
-    for (i = 0; i < LOOPS; ++i)
-        qHash.insert(Key[i], i);
-    for (i = 0; i < LOOPS; ++i)
-        Value = qHash.value(Key[i]);
-    T3 = QTime::currentTime();
-   
-    str = QString(u8"zHash time:%1;QHash time:%2;Gen time:%3\n").arg(T1.msecsTo(T2)).arg(T2.msecsTo(T3)).arg(T0.msecsTo(T1));
-    std::cout << str.toUtf8().constData();
+    return result;
+}
 
-    MyHash.CheckHash(Buckets, FilledBuckets, Elements, Collitions, MaxCollition);
-    str = QString(u8"Buckets=%1,FilledBuckets=%2,Elements=%3,Collitions=%4,MaxCollition=%5\n")
-        .arg(Buckets).arg(FilledBuckets).arg(Elements).arg(Collitions).arg(MaxCollition);
-    std::cout << str.toUtf8().constData();
+int main() {
+    ZZG::zHash<std::string, size_t> MyHash;
+    std::unordered_map<std::string, size_t> stdHash;
+    size_t Buckets, FilledBuckets, Elements, Collisions, MaxCollision;
 
-  //  return a.exec();
+    // Check time points to evaluate performance
+    auto T0 = std::chrono::high_resolution_clock::now();
+
+    // Create random strings
+    std::mt19937_64 gen(std::random_device{}());
+    std::vector<std::string> Keys(LOOPS);
+
+    for (size_t i = 0; i < LOOPS; ++i) {
+        Keys[i] = generate_random_string(gen, 16);
+    }
+
+    auto T1 = std::chrono::high_resolution_clock::now();
+
+    // Test ZZG::zHash
+    for (size_t i = 0; i < LOOPS; ++i) {
+        MyHash.Insert(Keys[i], i);
+    }
+
+    size_t Value;
+    for (size_t i = 0; i < LOOPS; ++i) {
+        MyHash.Value(Keys[i], &Value);
+    }
+
+    auto T2 = std::chrono::high_resolution_clock::now();
+
+    // Test std::unordered_map
+    for (size_t i = 0; i < LOOPS; ++i) {
+        stdHash[Keys[i]] = i;
+    }
+
+    for (size_t i = 0; i < LOOPS; ++i) {
+        Value = stdHash[Keys[i]];
+    }
+
+    auto T3 = std::chrono::high_resolution_clock::now();
+
+    // Calculate and print timing results
+    auto gen_time = std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count();
+    auto zHash_time = std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count();
+    auto stdHash_time = std::chrono::duration_cast<std::chrono::milliseconds>(T3 - T2).count();
+
+    std::cout << "zHash time: " << zHash_time 
+              << "; stdHash time: " << stdHash_time 
+              << "; Gen time: " << gen_time << "\n";
+
+    // Check ZZG::zHash statistics
+    MyHash.CheckHash(Buckets, FilledBuckets, Elements, Collisions, MaxCollision);
+    std::cout << "Buckets=" << Buckets 
+              << ", FilledBuckets=" << FilledBuckets 
+              << ", Elements=" << Elements 
+              << ", Collisions=" << Collisions 
+              << ", MaxCollision=" << MaxCollision << "\n";
+
+    return 0;
 }
