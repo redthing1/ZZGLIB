@@ -154,8 +154,8 @@ public:
 static const int M = 3;                  //The minimum degree of the B-Tree
 static const int KEY_MAX = 2 * M - 1;        //All nodes (including root) may contain at most (2*M – 1) keys.
 static const int KEY_MIN = M - 1;          //Every node except the root must contain at least M-1 keys. The root may contain 1 key.
-static const int CHILD_MAX = KEY_MAX + 1;  //Maximum children of a node.The number of a children of a node is equal to the number of keys in it plus 1.
-static const int CHILD_MIN = KEY_MIN + 1;  //Minimum children of a node.
+static const int ZZGH_CHILD_MAX = KEY_MAX + 1;  //Maximum children of a node.The number of a children of a node is equal to the number of keys in it plus 1.
+static const int ZZGH_CHILD_MIN = KEY_MIN + 1;  //Minimum children of a node.
 
 template<class TK, class TV>
 class zBTreeNode
@@ -164,7 +164,7 @@ public:
     zBTreeNode * parent;	//Pointer to the parent node
     int KeyNum;              //Number of the keys of the node
     DATA_NODE<TK, TV> *Key[KEY_MAX];     //Keys(Pointers to the data nodes)
-    zBTreeNode *pChild[CHILD_MAX]; //Pointers to children.If the first is 0, then all must be 0, and the node must be a leaf node
+    zBTreeNode *pChild[ZZGH_CHILD_MAX]; //Pointers to children.If the first is 0, then all must be 0, and the node must be a leaf node
 
 	zBTreeNode()
 	{}
@@ -569,7 +569,7 @@ private:
                 break;
 			--count;
 			for (int i = 0; i < 31; ++i)
-                zNop8();
+                zPause8();
         } while (true);
 	}
 
@@ -814,7 +814,7 @@ int zBTree<TK, TV>::Insert(const TK &key, size_t h, DATA_NODE<TK, TV> **&pD)
 			pRight->Key[i] = m_pRoot->Key[i + KEY_MIN + 1];
 			pRight->pChild[i] = m_pRoot->pChild[i + KEY_MIN + 1];
 		}
-        pRight->pChild[KEY_MIN] = m_pRoot->pChild[CHILD_MAX - 1];	//copies the pointer to the last child node
+        pRight->pChild[KEY_MIN] = m_pRoot->pChild[ZZGH_CHILD_MAX - 1];	//copies the pointer to the last child node
 
         //If the root node is a leaf node, then the split right node is also a leaf node, and the child node pointers need to be set 0
 		if (!m_pRoot->pChild[0])
@@ -895,22 +895,22 @@ bool zBTree<TK, TV>::splitChild(zBTreeNode <TK, TV> *pParent, int nChildIndex, z
 	int i;
     for (i = 0; i < KEY_MIN; ++i)//Copies the second half elements to the new right sibling node
 	{
-		pRightNode->Key[i] = pNode->Key[i + CHILD_MIN];
+		pRightNode->Key[i] = pNode->Key[i + ZZGH_CHILD_MIN];
 	}
 
     //If not leaf node,copies children node and updates their pointes to the parent
     if (pNode->pChild[0])
 	{
-		for (i = 0; i < CHILD_MIN; ++i)
+		for (i = 0; i < ZZGH_CHILD_MIN; ++i)
 		{
-			pRightNode->pChild[i] = pNode->pChild[i + CHILD_MIN];
+			pRightNode->pChild[i] = pNode->pChild[i + ZZGH_CHILD_MIN];
 			pRightNode->pChild[i]->parent = pRightNode;
 		}
 	}
 
     //If a leaf node,the splitted nodes are still leaf nodes,and all child poiters should be set to 0
 	else
-		for (int i = 0; i < CHILD_MAX; ++i)
+		for (int i = 0; i < ZZGH_CHILD_MAX; ++i)
 			pRightNode->pChild[i] = 0;
     pNode->KeyNum = KEY_MIN;  //Updates the amount of the keys of the left splitted child node(original node)
 

@@ -3,30 +3,82 @@
 #include "ZZG_Sync.h"
 //**********空指令**************
 
-//MS的VC编译器
+// //MS的VC编译器
+// #if defined(ZZG_MSVC)
+// #include <intrin.h>
+// void zPause8()
+// {
+//     __nop(); __nop(); __nop(); __nop(); __nop(); __nop(); __nop(); __nop();
+// }
+
+// #elif defined(ZZG_GNUC)
+// void zPause8()
+// {
+//     __asm__ __volatile__("nop");
+//     __asm__ __volatile__("nop");
+//     __asm__ __volatile__("nop");
+//     __asm__ __volatile__("nop");
+//     __asm__ __volatile__("nop");
+//     __asm__ __volatile__("nop");
+//     __asm__ __volatile__("nop");
+//     __asm__ __volatile__("nop");
+// }
+// #else
+// #error only MSVC and GCC are supported!
+// #endif
+
 #if defined(ZZG_MSVC)
-#include <intrin.h>
-void zNop8()
-{
-    __nop(); __nop(); __nop(); __nop(); __nop(); __nop(); __nop(); __nop();
-}
-
+    #include <intrin.h>
+    #if defined(_M_IX86) || defined(_M_X64)
+        #define ZZG_X86_X64
+    #elif defined(_M_ARM64)
+        #define ZZG_AARCH64
+    #endif
 #elif defined(ZZG_GNUC)
-void zNop8()
-{
-    __asm__ __volatile__("nop");
-    __asm__ __volatile__("nop");
-    __asm__ __volatile__("nop");
-    __asm__ __volatile__("nop");
-    __asm__ __volatile__("nop");
-    __asm__ __volatile__("nop");
-    __asm__ __volatile__("nop");
-    __asm__ __volatile__("nop");
-}
-
-#else
-#error only MSVC and GCC are supported!
+    #if defined(__i386__) || defined(__x86_64__)
+        #define ZZG_X86_X64
+    #elif defined(__aarch64__)
+        #define ZZG_AARCH64
+    #endif
 #endif
+
+void zPause8()
+{
+#if defined(ZZG_MSVC)
+    #if defined(ZZG_X86_X64)
+        for (int i = 0; i < 8; ++i) {
+            _mm_pause();
+        }
+    #elif defined(ZZG_AARCH64)
+        for (int i = 0; i < 8; ++i) {
+            __yield();
+        }
+    #else
+        for (int i = 0; i < 8; ++i) {
+            __nop();
+        }
+    #endif
+#elif defined(ZZG_GNUC)
+    #if defined(ZZG_X86_X64)
+        for (int i = 0; i < 8; ++i) {
+            __asm__ __volatile__ ("pause" ::: "memory");
+        }
+    #elif defined(ZZG_AARCH64)
+        for (int i = 0; i < 8; ++i) {
+            __asm__ __volatile__ ("yield" ::: "memory");
+        }
+    #else
+        for (int i = 0; i < 8; ++i) {
+            __asm__ __volatile__ ("nop" ::: "memory");
+        }
+    #endif
+#else
+    // Fallback for unsupported compilers/architectures
+    for (int i = 0; i < 8; ++i) {
+        // Do nothing
+    }
+#endif
+}
 
 //**********END*********************
 namespace ZZG
@@ -46,7 +98,7 @@ void zLock::Lock()
             Count=3;
         }
         //如果得不到锁，那么空转相当于约370个时钟周期后再尝试锁定
-        for (int k = 0; k < 37; ++k) { zNop8(); }
+        for (int k = 0; k < 37; ++k) { zPause8(); }
         --Count;
     }while(true);
 }
@@ -83,7 +135,7 @@ void zRWLock::RLock(void)
         else
         {
             //空转约370个指令周期后再尝试
-            for (int k = 0; k < 37; ++k) { zNop8(); }
+            for (int k = 0; k < 37; ++k) { zPause8(); }
         }
     } while (true);
 }
@@ -132,7 +184,7 @@ void zRWLock::WLock(void)
             Count = 3;
         }
         else
-            for (int k = 0; k < 37; ++k) { zNop8(); }
+            for (int k = 0; k < 37; ++k) { zPause8(); }
 
     } while (true);
 }

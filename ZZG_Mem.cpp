@@ -2,7 +2,8 @@
 //Version 20231001
 #include "ZZG_Bit.h"
 #include "ZZG_Sync.h"
-#include <malloc.h>
+// #include <malloc.h>
+#include <cstdlib>
 #include "ZZG_Mem.h"
 #include <stdint.h>
 namespace ZZG {
@@ -266,7 +267,7 @@ void z__AT::LockedFree(size_t UnitPos)
 	return;
 }
 
-//#define zNop8 __nop();__nop();__nop();__nop();__nop();__nop();__nop();__nop()
+//#define zPause8 __nop();__nop();__nop();__nop();__nop();__nop();__nop();__nop()
 #define WRITELOCKMASK 0x1000000ui32
 void z__AT::Lock(volatile LOCKFLAG * pFlag)
 {
@@ -284,7 +285,7 @@ void z__AT::Lock(volatile LOCKFLAG * pFlag)
 			Count = 3;
 		}		
 		//waits for about 370 instruction cycles before trying again
-        for (int k = 0; k < 37; ++k) { zNop8(); }
+        for (int k = 0; k < 37; ++k) { zPause8(); }
 	} while (true);
 }
 

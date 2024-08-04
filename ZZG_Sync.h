@@ -8,7 +8,7 @@
 /******使用说明********
 
 *********************/
-extern void zNop8();
+extern void zPause8();
 namespace ZZG {
 
 //等待对象的值到某个预设值。等待期间，线程阻塞
@@ -26,7 +26,7 @@ void zWaitUntil(volatile T &Object, T EndValue)
 			break;
 		--count;
 		for (int i = 0; i < 31; ++i)
-            zNop8();
+            zPause8();
 	} while (1);
 }
 
@@ -87,7 +87,7 @@ public:
 		{
 			int Count = 10;
 			do {
-                for (int i = 0; i < 10; ++i) { zNop8(); }
+                for (int i = 0; i < 10; ++i) { zPause8(); }
 				if (!(--Count))
 				{
                     std::this_thread::yield();
